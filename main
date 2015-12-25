@@ -1,0 +1,140 @@
+# Taste Compatibility Index
+def calculate_TCI(userID):
+    user_TCI_list[userID][0]=0
+    for i in range (userID+1,user_count):
+        temp_list=[]
+        for k in (user_rating_list[userID]):
+            for z in (hashed_rating_list[i][k[0]%200]):
+                if (k[0]==z[0]):
+                    temp_list.append(abs(k[1]-z[1]))
+        if (len(temp_list)>1):
+            this_TCI=0
+            for j in (temp_list):
+                this_TCI += j
+            this_TCI=float(this_TCI)/len(temp_list)
+            user_TCI_list[userID][i]=this_TCI
+            user_TCI_list[i][userID]=this_TCI
+    """ calculate top 100 TCI """
+    temp_list=[]
+    for i in range(user_count):
+        temp_list.append(user_TCI_list[userID][i])
+    for i in range(bestCount):
+        conti=False
+        for k in (temp_list):
+            if (k!="#"):
+                conti=True
+        if(conti):
+            min_TCI=100
+            min_index=-1
+            for k in range(len(temp_list)):
+                if (temp_list[k]!="#"):
+                    if(temp_list[k]<min_TCI):
+                        min_TCI=temp_list[k]
+                        min_index=k
+            best_user_TCI[userID].append([min_index,min_TCI])
+            temp_list[min_index]="#"
+        else:
+            break
+        
+#  Probable Score Indicator        
+def calculate_PSI(userID,movieID):
+    if(user_TCI_list[userID][0]=="#"):
+        calculate_TCI(userID)
+    temp_list=[]
+    for i in (best_user_TCI[userID]):
+        for j in (hashed_rating_list[i[0]][movieID%200]):
+            if(j[0]==movieID):
+                temp_list.append(j[1])
+                break
+    this_PSI=0
+    min_to_cal=3                        
+    if(len(temp_list)<min_to_cal):
+        return "not enough data"
+    else:
+        for i in range(min_to_cal):
+            this_PSI += temp_list[i]
+        this_PSI=float(temp_list[0]*2+temp_list[1]*1.5+temp_list[2])/4.5
+        return int('%.0f'%this_PSI)
+
+##################### testing functions ####################
+def test_exact_result(userID):
+    if(user_TCI_list[userID][0]=="#"):
+        calculate_TCI(userID)
+    rating_list=user_rating_list[userID]
+    best_TCI=best_user_TCI[userID]
+    total_results=len(rating_list)
+    correct_results=0
+    for i in (rating_list):
+        ans=calculate_PSI(userID,i[0])
+        if(ans!="not enough data"):
+            if (abs(int(ans)-i[1])<1):
+                correct_results += 1
+    return "%.2f"%(100.0*(correct_results)/total_results)
+
+def total_exact_test():
+    """tests percent of exact results for all users"""
+    result_file=open("exact_results.txt",'w')
+    for i in range(1,user_count):
+        result_file.write(test_exact_result(i))
+        result_file.write('\n')
+    result_file.close()
+
+def test_difference_result(userID):
+    if(user_TCI_list[userID][0]=="#"):
+        calculate_TCI(userID)
+    rating_list=user_rating_list[userID]
+    best_TCI=best_user_TCI[userID]
+    total_results=0
+    total_dif=0
+    for i in (rating_list):
+        ans=calculate_PSI(userID,i[0])
+        if(ans!="not enough data"):
+            total_dif +=abs(int(ans)-i[1])
+            total_results += 1
+    return "%.2f"%((20.0*total_dif)/total_results)
+
+def total_difference_test():
+    result_file=open("difference_percent_results.txt",'w')
+    t=0
+    for i in range(1,user_count):
+        ans=test_difference_result(i)
+        t += float(ans)
+        result_file.write(str(ans))
+        result_file.write('\n')
+    print "average difference percent is: "
+    print t/user_count
+    result_file.close()
+############################################################
+    
+rating_file=open('ratings.txt','r')
+rating_list=rating_file.readlines()
+user_rating_list=[[]]
+hashed_rating_list=[[]]
+user_TCI_list=[[]]
+best_user_TCI=[[]]
+bestCount=100                                         
+user_count=0
+""" Enter data in user rating list """
+for i in range (len(rating_list)):                  
+    rating_list[i]=rating_list[i].split()           
+    rating_list[i][0]=int(rating_list[i][0])
+    rating_list[i][1]=int(rating_list[i][1])
+    rating_list[i][2]=int(rating_list[i][2])
+for i in (rating_list):
+    if i[0]>user_count:
+        user_count=i[0]
+user_count+=1
+""" Extending arrays """
+for i in range (user_count):
+    user_rating_list.append([])
+    user_TCI_list.append([])
+    best_user_TCI.append([])
+    hashed_rating_list.append([])
+    for j in range(user_count):
+        user_TCI_list[i].append("#")
+    for j in range(200):
+        hashed_rating_list[i].append([])
+"""adding score to user rating lists"""
+for i in (rating_list):
+    user_rating_list[i[0]].append([i[1],i[2]])
+    hashed_rating_list[i[0]][i[1]%200].append([i[1],i[2]])
